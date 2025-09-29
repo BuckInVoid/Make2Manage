@@ -1,348 +1,211 @@
 import { useState } from 'react'
-import { 
-  TrendingUp, Package, Truck, Factory, 
-  ShoppingCart, Users, ArrowRight, AlertCircle, CheckCircle,
-  DollarSign, Clock, BarChart3
-} from 'lucide-react'
-
-interface SupplyChainNode {
-  id: string
-  name: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  currentStock: number
-  incomingOrders: number
-  outgoingOrders: number
-  weekCosts: number
-  totalCosts: number
-  backlog: number
-  inTransit: number
-  orderPlaced: number
-}
+import { Package, Truck, Factory, ShoppingCart, Users, DollarSign, TrendingUp, AlertCircle, BarChart3 } from 'lucide-react'
 
 export default function GameDashboard() {
-  const [currentWeek] = useState(5)
-  const [gamePhase] = useState<'planning' | 'executing' | 'reviewing'>('planning')
+  const currentWeek = 5
   
-  const [supplyChain] = useState<SupplyChainNode[]>([
-    {
-      id: 'retailer',
-      name: 'RETAILER',
-      icon: ShoppingCart,
-      currentStock: 12,
-      incomingOrders: 8,
-      outgoingOrders: 15,
-      weekCosts: 45,
-      totalCosts: 230,
-      backlog: 3,
-      inTransit: 6,
-      orderPlaced: 18
-    },
-    {
-      id: 'wholesaler', 
-      name: 'WHOLESALER',
-      icon: Package,
-      currentStock: 28,
-      incomingOrders: 18,
-      outgoingOrders: 22,
-      weekCosts: 62,
-      totalCosts: 315,
-      backlog: 0,
-      inTransit: 12,
-      orderPlaced: 25
-    },
-    {
-      id: 'distributor',
-      name: 'DISTRIBUTOR', 
-      icon: Truck,
-      currentStock: 35,
-      incomingOrders: 25,
-      outgoingOrders: 20,
-      weekCosts: 38,
-      totalCosts: 195,
-      backlog: 2,
-      inTransit: 15,
-      orderPlaced: 22
-    },
-    {
-      id: 'manufacturer',
-      name: 'MANUFACTURER',
-      icon: Factory,
-      currentStock: 45,
-      incomingOrders: 22,
-      outgoingOrders: 25,
-      weekCosts: 71,
-      totalCosts: 380,
-      backlog: 1,
-      inTransit: 20,
-      orderPlaced: 30
-    }
-  ])
+  const supplyChain = [
+    { id: 'retailer', name: 'Retailer', icon: ShoppingCart, stock: 12, orders: 8, costs: 230, incoming: 6, color: 'blue' },
+    { id: 'wholesaler', name: 'Wholesaler', icon: Package, stock: 28, orders: 18, costs: 315, incoming: 12, color: 'orange' },
+    { id: 'distributor', name: 'Distributor', icon: Truck, stock: 35, orders: 25, costs: 195, incoming: 15, color: 'emerald' },
+    { id: 'manufacturer', name: 'Manufacturer', icon: Factory, stock: 45, orders: 22, costs: 380, incoming: 20, color: 'purple' }
+  ]
 
-  const [newOrders, setNewOrders] = useState<Record<string, number>>({
-    retailer: 0,
-    wholesaler: 0,
-    distributor: 0,
-    manufacturer: 0
+  const [orders, setOrders] = useState<Record<string, string>>({ 
+    retailer: '', 
+    wholesaler: '', 
+    distributor: '', 
+    manufacturer: '' 
   })
 
-  const handleOrderSubmit = (nodeId: string, quantity: number) => {
-    setNewOrders(prev => ({ ...prev, [nodeId]: quantity }))
+  const getColorClasses = (color: string) => {
+    const colorMap = {
+      blue: {
+        gradient: 'from-blue-500 to-blue-600',
+        light: 'text-blue-100',
+        lighter: 'text-blue-200',
+        icon: 'bg-blue-100',
+        iconText: 'text-blue-600'
+      },
+      orange: {
+        gradient: 'from-orange-500 to-orange-600',
+        light: 'text-orange-100',
+        lighter: 'text-orange-200',
+        icon: 'bg-orange-100',
+        iconText: 'text-orange-600'
+      },
+      emerald: {
+        gradient: 'from-emerald-500 to-emerald-600',
+        light: 'text-emerald-100',
+        lighter: 'text-emerald-200',
+        icon: 'bg-emerald-100',
+        iconText: 'text-emerald-600'
+      },
+      purple: {
+        gradient: 'from-purple-500 to-purple-600',
+        light: 'text-purple-100',
+        lighter: 'text-purple-200',
+        icon: 'bg-purple-100',
+        iconText: 'text-purple-600'
+      }
+    }
+    return colorMap[color as keyof typeof colorMap]
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      {/* Game Header */}
-      <div className="mb-6">
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Make2Manage Supply Chain</h1>
-              <div className="text-sm text-gray-600">Week {currentWeek} | {gamePhase === 'planning' ? 'Planningsfase' : gamePhase === 'executing' ? 'Uitvoeringsfase' : 'Evaluatiefase'}</div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                Volgende Week
-              </button>
-            </div>
+    <div className="w-screen h-screen bg-white flex overflow-hidden">
+      
+      {/* Sidebar */}
+      <div className="w-16 bg-slate-800 flex flex-col items-center py-6 shrink-0">
+        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center mb-8">
+          <span className="text-sm font-bold text-slate-800">SC</span>
+        </div>
+        
+        <div className="flex flex-col space-y-6">
+          <div className="w-8 h-8 bg-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-slate-500 transition-colors">
+            <BarChart3 size={16} className="text-white" />
+          </div>
+          <div className="w-8 h-8 bg-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-slate-500 transition-colors">
+            <TrendingUp size={16} className="text-white" />
+          </div>
+          <div className="w-8 h-8 bg-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-slate-500 transition-colors">
+            <Package size={16} className="text-white" />
+          </div>
+          <div className="w-8 h-8 bg-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-slate-500 transition-colors">
+            <AlertCircle size={16} className="text-white" />
           </div>
         </div>
       </div>
 
-      {/* Supply Chain Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        {supplyChain.map((node, index) => (
-          <div key={node.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-            {/* Node Header */}
-            <div className={`p-4 text-white text-center font-semibold ${
-              node.id === 'retailer' ? 'bg-blue-600' :
-              node.id === 'wholesaler' ? 'bg-green-600' :
-              node.id === 'distributor' ? 'bg-orange-600' : 'bg-purple-600'
-            }`}>
-              <div className="flex items-center justify-center space-x-2">
-                <node.icon className="w-5 h-5" />
-                <span>{node.name}</span>
-              </div>
-            </div>
-
-            {/* Metrics Section */}
-            <div className="p-4 space-y-4">
-              {/* Customer Orders */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Klantorders</span>
-                  <Users className="w-4 h-4 text-gray-500" />
-                </div>
-                <div className="flex justify-between">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{node.incomingOrders}</div>
-                    <div className="text-xs text-gray-500">Inkomend</div>
-                  </div>
-                  <div className="w-px bg-gray-300"></div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{node.backlog}</div>
-                    <div className="text-xs text-gray-500">Achterstand</div>
-                  </div>
-                </div>
-                {node.backlog > 0 && (
-                  <div className="mt-2 flex items-center text-red-600 text-xs">
-                    <AlertCircle className="w-3 h-3 mr-1" />
-                    Achterstand in orders
-                  </div>
-                )}
-              </div>
-
-              {/* Stock Level */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Voorraad</span>
-                  <Package className="w-4 h-4 text-gray-500" />
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">{node.currentStock}</div>
-                  <div className="text-xs text-gray-500">Units beschikbaar</div>
-                </div>
-                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${node.currentStock > 20 ? 'bg-green-500' : node.currentStock > 10 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                    style={{width: `${Math.min(100, (node.currentStock / 50) * 100)}%`}}
-                  ></div>
-                </div>
-              </div>
-
-              {/* Transport */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Transport</span>
-                  <Truck className="w-4 h-4 text-gray-500" />
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{node.inTransit}</div>
-                  <div className="text-xs text-gray-500">Onderweg (volgende week)</div>
-                </div>
-              </div>
-
-              {/* Weekly Costs */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Kosten</span>
-                  <DollarSign className="w-4 h-4 text-gray-500" />
-                </div>
-                <div className="flex justify-between">
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-orange-600">€{node.weekCosts}</div>
-                    <div className="text-xs text-gray-500">Deze week</div>
-                  </div>
-                  <div className="w-px bg-gray-300"></div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-red-600">€{node.totalCosts}</div>
-                    <div className="text-xs text-gray-500">Totaal</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Order Input */}
-              <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-200">
-                <label className="block text-sm font-medium text-blue-800 mb-2">
-                  Nieuwe bestelling plaatsen
-                </label>
-                <div className="flex space-x-2">
-                  <input 
-                    type="number"
-                    defaultValue={newOrders[node.id]}
-                    onChange={(e) => setNewOrders(prev => ({ ...prev, [node.id]: parseInt(e.target.value) || 0 }))}
-                    className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Aantal"
-                    min="0"
-                  />
-                  <button 
-                    onClick={() => handleOrderSubmit(node.id, newOrders[node.id])}
-                    className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Bestel
-                  </button>
-                </div>
-                {newOrders[node.id] > 0 && (
-                  <div className="mt-2 flex items-center text-green-600 text-sm">
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Order van {newOrders[node.id]} units geplaatst
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Flow Arrow */}
-            {index < supplyChain.length - 1 && (
-              <div className="hidden lg:block absolute top-1/2 -right-2 transform -translate-y-1/2 z-10">
-                <div className="bg-gray-600 text-white rounded-full p-2">
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Game Statistics */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Supply Chain Prestaties</h3>
-            <BarChart3 className="w-6 h-6 text-blue-600" />
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Totale Kosten</span>
-              <span className="font-semibold">€{supplyChain.reduce((sum, node) => sum + node.totalCosts, 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Gemiddelde Voorraad</span>
-              <span className="font-semibold">{Math.round(supplyChain.reduce((sum, node) => sum + node.currentStock, 0) / supplyChain.length)} units</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Totale Achterstand</span>
-              <span className={`font-semibold ${supplyChain.reduce((sum, node) => sum + node.backlog, 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {supplyChain.reduce((sum, node) => sum + node.backlog, 0)} orders
-              </span>
-            </div>
-          </div>
+      {/* Main Content */}
+      <div className="flex-1 h-full p-8 bg-gray-50 overflow-y-auto">
+        
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Supply Chain Dashboard</h1>
+          <p className="text-gray-600">Week {currentWeek} • Manufacturing Planning & Control</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Efficiency Metrics</h3>
-            <TrendingUp className="w-6 h-6 text-green-600" />
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Service Level</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-20 bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{width: '87%'}}></div>
+        {/* Top Metrics Cards - 4 Afdelingen */}
+        <div className="grid grid-cols-4 gap-6 mb-8">
+          {supplyChain.map((node) => {
+            const IconComponent = node.icon
+            const colors = getColorClasses(node.color)
+            return (
+              <div key={`top-${node.id}`} className={`bg-gradient-to-br ${colors.gradient} rounded-xl p-6 text-white shadow-lg`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`${colors.light} text-sm font-medium`}>{node.name}</p>
+                    <p className="text-3xl font-bold mt-1">{node.stock}</p>
+                    <p className={`${colors.lighter} text-xs mt-1`}>Units in stock</p>
+                  </div>
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <IconComponent size={24} />
+                  </div>
                 </div>
-                <span className="text-sm font-medium">87%</span>
               </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Inventory Turnover</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-20 bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{width: '73%'}}></div>
-                </div>
-                <span className="text-sm font-medium">73%</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Cost Efficiency</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-20 bg-gray-200 rounded-full h-2">
-                  <div className="bg-yellow-500 h-2 rounded-full" style={{width: '65%'}}></div>
-                </div>
-                <span className="text-sm font-medium">65%</span>
-              </div>
-            </div>
-          </div>
+            )
+          })}
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Game Controls</h3>
-            <Clock className="w-6 h-6 text-purple-600" />
-          </div>
-          <div className="space-y-3">
-            <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
-              Simuleer Volgende Week
-            </button>
-            <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-              Bekijk Trends & Analyse
-            </button>
-            <button className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors">
-              Exporteer Resultaten
-            </button>
-            <div className="text-sm text-gray-500 text-center mt-4">
-              Week {currentWeek} van 20 | Planning fase
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Decision Log */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Beslissingen Log - Week {currentWeek}</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Operations Grid */}
+        <div className="grid grid-cols-6 gap-4 mb-8">
+          
+          {/* Current Orders Row */}
           {supplyChain.map((node) => (
-            <div key={node.id} className="border rounded-lg p-3">
-              <div className="font-medium text-gray-900 mb-2">{node.name}</div>
-              <div className="space-y-1 text-sm text-gray-600">
-                <div>Besteld: {node.orderPlaced} units</div>
-                <div>Geleverd: {node.outgoingOrders} units</div>
-                <div>Status: {node.backlog > 0 ? 
-                  <span className="text-red-600">Achterstand</span> : 
-                  <span className="text-green-600">Op schema</span>
-                }</div>
+            <div key={`orders-${node.id}`} className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-center">
+                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Users size={20} className="text-indigo-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800 text-xs mb-1">Current Orders</h3>
+                <p className="text-xl font-bold text-gray-900 mb-1">{node.orders}</p>
+                <p className="text-xs text-gray-500">{node.name}</p>
               </div>
             </div>
           ))}
+
+          {/* Stock Levels Row */}
+          {supplyChain.map((node) => (
+            <div key={`stock-${node.id}`} className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-center">
+                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Package size={20} className="text-green-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800 text-xs mb-1">Stock Level</h3>
+                <p className="text-xl font-bold text-gray-900 mb-1">{node.stock}</p>
+                <p className="text-xs text-gray-500">{node.name}</p>
+              </div>
+            </div>
+          ))}
+
+          {/* Incoming Shipments Row */}
+          {supplyChain.map((node) => (
+            <div key={`incoming-${node.id}`} className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-center">
+                <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Truck size={20} className="text-yellow-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800 text-xs mb-1">Incoming</h3>
+                <p className="text-xl font-bold text-gray-900 mb-1">{node.incoming}</p>
+                <p className="text-xs text-gray-500">{node.name}</p>
+              </div>
+            </div>
+          ))}
+
+          {/* Weekly Costs Row */}
+          {supplyChain.map((node) => (
+            <div key={`costs-${node.id}`} className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-center">
+                <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <DollarSign size={20} className="text-red-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800 text-xs mb-1">Weekly Costs</h3>
+                <p className="text-xl font-bold text-red-600 mb-1">${node.costs}</p>
+                <p className="text-xs text-gray-500">{node.name}</p>
+              </div>
+            </div>
+          ))}
+
         </div>
+
+        {/* Order Input Section */}
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-800 mb-6">Place New Orders</h2>
+          <div className="grid grid-cols-4 gap-6">
+            {supplyChain.map((node) => {
+              const IconComponent = node.icon
+              const colors = getColorClasses(node.color)
+              return (
+                <div key={`input-${node.id}`} className="border-2 border-gray-100 rounded-xl p-6 hover:border-blue-200 transition-colors">
+                  <div className="text-center">
+                    <div className={`w-12 h-12 ${colors.icon} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+                      <IconComponent size={24} className={colors.iconText} />
+                    </div>
+                    <h3 className="font-semibold text-gray-800 text-sm mb-3">{node.name}</h3>
+                    <input 
+                      type="number"
+                      value={orders[node.id]}
+                      onChange={(e) => setOrders(prev => ({ ...prev, [node.id]: e.target.value }))}
+                      className="w-full text-center text-lg font-semibold border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:outline-none transition-colors"
+                      placeholder="0"
+                      min="0"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">Units to order</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          
+          {/* Submit Button */}
+          <div className="mt-8 flex justify-center">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
+              Submit Orders for Week {currentWeek + 1}
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   )
