@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
@@ -71,3 +72,15 @@ export default defineConfig([
   },
 ])
 ```
+=======
+# Make2Manage
+Educational web-based simulation game that teaches make-to-order production planning, helping students and professionals balance cost efficiency with delivery reliability.
+
+
+🎯 Educational game for manufacturing planning concepts
+🏭 Make-to-order production scenarios  
+💡 Interactive decision-making with real-time feedback
+📊 Individual learning sessions with progress tracking
+🎓 TBK education (day & lifelong learning)
+⚡ Vite + React + TypeScript + Tailwind CSS
+>>>>>>> 65f26125c7ddc5562852ae10d67a3638944c673d
