@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Factory, Users, Target, BarChart3 } from 'lucide-react'
-import GameHeader from './components/GameHeader'
-import GameDashboard from './components/GameDashboard'
+import { GameHeader, GameDashboard } from './components'
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<'welcome' | 'game'>('welcome')

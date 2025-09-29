@@ -1,381 +1,347 @@
 import { useState } from 'react'
 import { 
-  Clock, DollarSign, Truck, AlertTriangle, TrendingUp, TrendingDown, 
-  Users, Package, Calendar, BarChart3, Settings, Download, Play, 
-  CheckCircle, XCircle, AlertCircle, Factory
+  TrendingUp, Package, Truck, Factory, 
+  ShoppingCart, Users, ArrowRight, AlertCircle, CheckCircle,
+  DollarSign, Clock, BarChart3
 } from 'lucide-react'
 
+interface SupplyChainNode {
+  id: string
+  name: string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  currentStock: number
+  incomingOrders: number
+  outgoingOrders: number
+  weekCosts: number
+  totalCosts: number
+  backlog: number
+  inTransit: number
+  orderPlaced: number
+}
+
 export default function GameDashboard() {
-  const [currentScenario] = useState(1)
-  const [activeTab, setActiveTab] = useState<'overview' | 'scenarios' | 'performance' | 'export'>('overview')
-  const [gameData] = useState({
-    costs: 15000,
-    deliveryTime: 8,
-    reliability: 85,
-    customerSatisfaction: 75,
-    ordersCompleted: 12,
-    totalOrders: 15,
-    currentWeek: 3,
-    totalWeeks: 8
+  const [currentWeek] = useState(5)
+  const [gamePhase] = useState<'planning' | 'executing' | 'reviewing'>('planning')
+  
+  const [supplyChain] = useState<SupplyChainNode[]>([
+    {
+      id: 'retailer',
+      name: 'RETAILER',
+      icon: ShoppingCart,
+      currentStock: 12,
+      incomingOrders: 8,
+      outgoingOrders: 15,
+      weekCosts: 45,
+      totalCosts: 230,
+      backlog: 3,
+      inTransit: 6,
+      orderPlaced: 18
+    },
+    {
+      id: 'wholesaler', 
+      name: 'WHOLESALER',
+      icon: Package,
+      currentStock: 28,
+      incomingOrders: 18,
+      outgoingOrders: 22,
+      weekCosts: 62,
+      totalCosts: 315,
+      backlog: 0,
+      inTransit: 12,
+      orderPlaced: 25
+    },
+    {
+      id: 'distributor',
+      name: 'DISTRIBUTOR', 
+      icon: Truck,
+      currentStock: 35,
+      incomingOrders: 25,
+      outgoingOrders: 20,
+      weekCosts: 38,
+      totalCosts: 195,
+      backlog: 2,
+      inTransit: 15,
+      orderPlaced: 22
+    },
+    {
+      id: 'manufacturer',
+      name: 'MANUFACTURER',
+      icon: Factory,
+      currentStock: 45,
+      incomingOrders: 22,
+      outgoingOrders: 25,
+      weekCosts: 71,
+      totalCosts: 380,
+      backlog: 1,
+      inTransit: 20,
+      orderPlaced: 30
+    }
+  ])
+
+  const [newOrders, setNewOrders] = useState<Record<string, number>>({
+    retailer: 0,
+    wholesaler: 0,
+    distributor: 0,
+    manufacturer: 0
   })
 
-  const recentDecisions = [
-    { id: 1, scenario: "Rush Order", decision: "Accept with overtime", impact: "positive", cost: 1200 },
-    { id: 2, scenario: "Supplier Delay", decision: "Find alternative supplier", impact: "neutral", cost: 800 },
-    { id: 3, scenario: "Quality Issue", decision: "Rework internally", impact: "negative", cost: 2100 }
-  ]
-
-  const upcomingScenarios = [
-    { id: 4, title: "Equipment Breakdown", difficulty: "high", estimatedTime: "15 min" },
-    { id: 5, title: "New Customer Inquiry", difficulty: "medium", estimatedTime: "10 min" },
-    { id: 6, title: "Seasonal Demand Spike", difficulty: "high", estimatedTime: "20 min" }
-  ]
+  const handleOrderSubmit = (nodeId: string, quantity: number) => {
+    setNewOrders(prev => ({ ...prev, [nodeId]: quantity }))
+  }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {/* Navigation Tabs */}
+    <div className="min-h-screen bg-gray-100 p-4">
+      {/* Game Header */}
       <div className="mb-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            {(['overview', 'scenarios', 'performance', 'export'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm capitalize ${
-                  activeTab === tab
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {tab}
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Make2Manage Supply Chain</h1>
+              <div className="text-sm text-gray-600">Week {currentWeek} | {gamePhase === 'planning' ? 'Planningsfase' : gamePhase === 'executing' ? 'Uitvoeringsfase' : 'Evaluatiefase'}</div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                Volgende Week
               </button>
-            ))}
-          </nav>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Overview Tab */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Key Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Kosten</p>
-                  <p className="text-2xl font-semibold text-gray-900">€{gameData.costs.toLocaleString()}</p>
-                </div>
-                <DollarSign className="w-8 h-8 text-green-600" />
-              </div>
-              <div className="mt-2 flex items-center">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600">12% vs vorige week</span>
+      {/* Supply Chain Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        {supplyChain.map((node, index) => (
+          <div key={node.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+            {/* Node Header */}
+            <div className={`p-4 text-white text-center font-semibold ${
+              node.id === 'retailer' ? 'bg-blue-600' :
+              node.id === 'wholesaler' ? 'bg-green-600' :
+              node.id === 'distributor' ? 'bg-orange-600' : 'bg-purple-600'
+            }`}>
+              <div className="flex items-center justify-center space-x-2">
+                <node.icon className="w-5 h-5" />
+                <span>{node.name}</span>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Gem. Levertijd</p>
-                  <p className="text-2xl font-semibold text-gray-900">{gameData.deliveryTime} dagen</p>
+            {/* Metrics Section */}
+            <div className="p-4 space-y-4">
+              {/* Customer Orders */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Klantorders</span>
+                  <Users className="w-4 h-4 text-gray-500" />
                 </div>
-                <Clock className="w-8 h-8 text-blue-600" />
+                <div className="flex justify-between">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{node.incomingOrders}</div>
+                    <div className="text-xs text-gray-500">Inkomend</div>
+                  </div>
+                  <div className="w-px bg-gray-300"></div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">{node.backlog}</div>
+                    <div className="text-xs text-gray-500">Achterstand</div>
+                  </div>
+                </div>
+                {node.backlog > 0 && (
+                  <div className="mt-2 flex items-center text-red-600 text-xs">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    Achterstand in orders
+                  </div>
+                )}
               </div>
-              <div className="mt-2 flex items-center">
-                <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
-                <span className="text-sm text-red-600">2% langzamer</span>
+
+              {/* Stock Level */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Voorraad</span>
+                  <Package className="w-4 h-4 text-gray-500" />
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">{node.currentStock}</div>
+                  <div className="text-xs text-gray-500">Units beschikbaar</div>
+                </div>
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full ${node.currentStock > 20 ? 'bg-green-500' : node.currentStock > 10 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                    style={{width: `${Math.min(100, (node.currentStock / 50) * 100)}%`}}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Transport */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Transport</span>
+                  <Truck className="w-4 h-4 text-gray-500" />
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{node.inTransit}</div>
+                  <div className="text-xs text-gray-500">Onderweg (volgende week)</div>
+                </div>
+              </div>
+
+              {/* Weekly Costs */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Kosten</span>
+                  <DollarSign className="w-4 h-4 text-gray-500" />
+                </div>
+                <div className="flex justify-between">
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-orange-600">€{node.weekCosts}</div>
+                    <div className="text-xs text-gray-500">Deze week</div>
+                  </div>
+                  <div className="w-px bg-gray-300"></div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-red-600">€{node.totalCosts}</div>
+                    <div className="text-xs text-gray-500">Totaal</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Input */}
+              <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-200">
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Nieuwe bestelling plaatsen
+                </label>
+                <div className="flex space-x-2">
+                  <input 
+                    type="number"
+                    defaultValue={newOrders[node.id]}
+                    onChange={(e) => setNewOrders(prev => ({ ...prev, [node.id]: parseInt(e.target.value) || 0 }))}
+                    className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Aantal"
+                    min="0"
+                  />
+                  <button 
+                    onClick={() => handleOrderSubmit(node.id, newOrders[node.id])}
+                    className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Bestel
+                  </button>
+                </div>
+                {newOrders[node.id] > 0 && (
+                  <div className="mt-2 flex items-center text-green-600 text-sm">
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Order van {newOrders[node.id]} units geplaatst
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Betrouwbaarheid</p>
-                  <p className="text-2xl font-semibold text-gray-900">{gameData.reliability}%</p>
+            {/* Flow Arrow */}
+            {index < supplyChain.length - 1 && (
+              <div className="hidden lg:block absolute top-1/2 -right-2 transform -translate-y-1/2 z-10">
+                <div className="bg-gray-600 text-white rounded-full p-2">
+                  <ArrowRight className="w-4 h-4" />
                 </div>
-                <Truck className="w-8 h-8 text-purple-600" />
               </div>
-              <div className="mt-2 flex items-center">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600">5% verbeterd</span>
-              </div>
-            </div>
+            )}
+          </div>
+        ))}
+      </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Klanttevredenheid</p>
-                  <p className="text-2xl font-semibold text-gray-900">{gameData.customerSatisfaction}%</p>
-                </div>
-                <Users className="w-8 h-8 text-orange-600" />
-              </div>
-              <div className="mt-2 flex items-center">
-                <span className="text-sm text-gray-600">Stabiel t.o.v. vorige maand</span>
-              </div>
+      {/* Game Statistics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Supply Chain Prestaties</h3>
+            <BarChart3 className="w-6 h-6 text-blue-600" />
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Totale Kosten</span>
+              <span className="font-semibold">€{supplyChain.reduce((sum, node) => sum + node.totalCosts, 0)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Gemiddelde Voorraad</span>
+              <span className="font-semibold">{Math.round(supplyChain.reduce((sum, node) => sum + node.currentStock, 0) / supplyChain.length)} units</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Totale Achterstand</span>
+              <span className={`font-semibold ${supplyChain.reduce((sum, node) => sum + node.backlog, 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {supplyChain.reduce((sum, node) => sum + node.backlog, 0)} orders
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* Progress Section */}
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Game Progress */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Scenario Voortgang</h3>
-                <Factory className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Voltooid</span>
-                    <span>{gameData.ordersCompleted}/{gameData.totalOrders} scenario's</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-blue-600 h-3 rounded-full transition-all duration-300" 
-                      style={{width: `${(gameData.ordersCompleted / gameData.totalOrders) * 100}%`}}
-                    ></div>
-                  </div>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Efficiency Metrics</h3>
+            <TrendingUp className="w-6 h-6 text-green-600" />
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Service Level</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full" style={{width: '87%'}}></div>
                 </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Week Voortgang</span>
-                    <span>{gameData.currentWeek}/{gameData.totalWeeks} weken</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-green-600 h-3 rounded-full transition-all duration-300" 
-                      style={{width: `${(gameData.currentWeek / gameData.totalWeeks) * 100}%`}}
-                    ></div>
-                  </div>
-                </div>
+                <span className="text-sm font-medium">87%</span>
               </div>
             </div>
-
-            {/* Recent Decisions */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recente Beslissingen</h3>
-                <BarChart3 className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="space-y-3">
-                {recentDecisions.map((decision) => (
-                  <div key={decision.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      {decision.impact === 'positive' && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      {decision.impact === 'negative' && <XCircle className="w-4 h-4 text-red-500" />}
-                      {decision.impact === 'neutral' && <AlertCircle className="w-4 h-4 text-yellow-500" />}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{decision.scenario}</p>
-                        <p className="text-xs text-gray-600">{decision.decision}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-900">€{decision.cost}</span>
-                  </div>
-                ))}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Inventory Turnover</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full" style={{width: '73%'}}></div>
+                </div>
+                <span className="text-sm font-medium">73%</span>
               </div>
             </div>
-
-            {/* Upcoming Scenarios */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Volgende Scenario's</h3>
-                <Calendar className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="space-y-3">
-                {upcomingScenarios.map((scenario) => (
-                  <div key={scenario.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{scenario.title}</p>
-                      <p className="text-xs text-gray-600">Geschatte tijd: {scenario.estimatedTime}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        scenario.difficulty === 'high' ? 'bg-red-100 text-red-800' :
-                        scenario.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {scenario.difficulty === 'high' ? 'Hoog' : 
-                         scenario.difficulty === 'medium' ? 'Gemiddeld' : 'Laag'}
-                      </span>
-                      <Play className="w-4 h-4 text-blue-600" />
-                    </div>
-                  </div>
-                ))}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Cost Efficiency</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div className="bg-yellow-500 h-2 rounded-full" style={{width: '65%'}}></div>
+                </div>
+                <span className="text-sm font-medium">65%</span>
               </div>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Scenarios Tab */}
-      {activeTab === 'scenarios' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Scenario {currentScenario}: Nieuwe Productieorder
-            </h2>
-            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-              <div className="flex">
-                <AlertTriangle className="w-5 h-5 text-blue-400 mr-2" />
-                <div>
-                  <p className="text-blue-800">
-                    <strong>Situatie:</strong> Een belangrijke klant vraagt om een rush order van 500 units. 
-                    De normale levertijd is 10 dagen, maar zij hebben het product over 6 dagen nodig.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-gray-900 mb-4">Wat is je beslissing?</h3>
-                <div className="space-y-3">
-                  <label className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input type="radio" name="decision" className="text-blue-600 mt-1" />
-                    <div>
-                      <span className="font-medium text-gray-900">Accepteer de rush order met overtime kosten</span>
-                      <p className="text-sm text-gray-600 mt-1">+30% kosten, maar behoudt klantrelatie. Risico op werknemersuitputting.</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input type="radio" name="decision" className="text-blue-600 mt-1" />
-                    <div>
-                      <span className="font-medium text-gray-900">Stel alternatieve levertijd voor (8 dagen)</span>
-                      <p className="text-sm text-gray-600 mt-1">Normale kosten, compromis met klant. 70% kans dat klant akkoord gaat.</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input type="radio" name="decision" className="text-blue-600 mt-1" />
-                    <div>
-                      <span className="font-medium text-gray-900">Wijs de order af</span>
-                      <p className="text-sm text-gray-600 mt-1">Geen extra kosten, maar mogelijke klantverlies en reputatieschade.</p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              
-              <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                Bevestig Beslissing
-              </button>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Game Controls</h3>
+            <Clock className="w-6 h-6 text-purple-600" />
+          </div>
+          <div className="space-y-3">
+            <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+              Simuleer Volgende Week
+            </button>
+            <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+              Bekijk Trends & Analyse
+            </button>
+            <button className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors">
+              Exporteer Resultaten
+            </button>
+            <div className="text-sm text-gray-500 text-center mt-4">
+              Week {currentWeek} van 20 | Planning fase
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Performance Tab */}
-      {activeTab === 'performance' && (
-        <div className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Prestatie Overzicht</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Kostenbeheersing</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div className="bg-yellow-500 h-2 rounded-full" style={{width: '68%'}}></div>
-                    </div>
-                    <span className="text-sm font-medium">68%</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Levertijd Optimalisatie</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{width: '82%'}}></div>
-                    </div>
-                    <span className="text-sm font-medium">82%</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Kwaliteitsmanagement</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{width: '75%'}}></div>
-                    </div>
-                    <span className="text-sm font-medium">75%</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Klantcommunicatie</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{width: '91%'}}></div>
-                    </div>
-                    <span className="text-sm font-medium">91%</span>
-                  </div>
-                </div>
+      {/* Decision Log */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Beslissingen Log - Week {currentWeek}</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {supplyChain.map((node) => (
+            <div key={node.id} className="border rounded-lg p-3">
+              <div className="font-medium text-gray-900 mb-2">{node.name}</div>
+              <div className="space-y-1 text-sm text-gray-600">
+                <div>Besteld: {node.orderPlaced} units</div>
+                <div>Geleverd: {node.outgoingOrders} units</div>
+                <div>Status: {node.backlog > 0 ? 
+                  <span className="text-red-600">Achterstand</span> : 
+                  <span className="text-green-600">Op schema</span>
+                }</div>
               </div>
             </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Leerresultaten</h3>
-              <div className="space-y-4">
-                <div className="border-l-4 border-green-400 pl-4">
-                  <h4 className="font-medium text-green-800">Sterke Punten</h4>
-                  <ul className="text-sm text-green-700 mt-2 space-y-1">
-                    <li>• Uitstekende klantcommunicatie</li>
-                    <li>• Goede levertijd optimalisatie</li>
-                    <li>• Effectieve planningsmethoden</li>
-                  </ul>
-                </div>
-                <div className="border-l-4 border-yellow-400 pl-4">
-                  <h4 className="font-medium text-yellow-800">Verbeterpunten</h4>
-                  <ul className="text-sm text-yellow-700 mt-2 space-y-1">
-                    <li>• Kostenbeheersing kan beter</li>
-                    <li>• Meer aandacht voor risicomanagement</li>
-                    <li>• Leverancierrelaties optimaliseren</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Export Tab */}
-      {activeTab === 'export' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Exporteer Resultaten</h3>
-            <p className="text-gray-600 mb-6">
-              Download je leerresultaten en voortgang om te delen met je docent of voor eigen analyse.
-            </p>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-              <button className="flex items-center justify-center space-x-2 bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 transition-colors">
-                <Download className="w-5 h-5" />
-                <span>Export als PDF</span>
-              </button>
-              <button className="flex items-center justify-center space-x-2 bg-green-600 text-white p-4 rounded-lg hover:bg-green-700 transition-colors">
-                <Download className="w-5 h-5" />
-                <span>Export als CSV</span>
-              </button>
-            </div>
-            
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">Wat wordt geëxporteerd:</h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Alle gemaakte beslissingen per scenario</li>
-                <li>• Prestatiemetrics en trends</li>
-                <li>• Leerresultaten en feedback</li>
-                <li>• Tijdsbesteding per onderdeel</li>
-                <li>• Sterke punten en verbeterpunten</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Actions Bar */}
-      <div className="fixed bottom-6 right-6">
-        <div className="flex space-x-3">
-          <button className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
-            <Settings className="w-5 h-5" />
-          </button>
-          <button className="bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-green-700 transition-colors">
-            <Package className="w-5 h-5" />
-          </button>
+          ))}
         </div>
       </div>
     </div>
