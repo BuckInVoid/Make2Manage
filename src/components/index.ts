@@ -1,2 +1,2 @@
-export { default as GameHeader } from './GameHeader'
-export { default as GameDashboard } from './GameDashboard'
+export { default as Sidebar } from './Sidebar'
+export { default as Header } from './Header'
