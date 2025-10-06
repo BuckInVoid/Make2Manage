@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { GameState, GameSettings, Order, Department, GameEvent } from '../types'
+import type { GameState, GameSettings, Order, Department, GameEvent, Decision } from '../types'
 import { initializeGameState, SeededRandom, generateRandomRoute } from '../utils/gameInitialization'
 
 export const useGameSimulation = (initialSettings: GameSettings) => {
   const [gameState, setGameState] = useState<GameState>(() => initializeGameState(initialSettings))
   const [isRunning, setIsRunning] = useState(false)
+  const [currentDecisionIndex, setCurrentDecisionIndex] = useState(-1) // R13: Track decision position
   const intervalRef = useRef<number | null>(null)
   const lastUpdateTime = useRef<number>(Date.now())
   const rngRef = useRef(new SeededRandom(initialSettings.randomSeed))
@@ -44,8 +45,35 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
       const route = generateRandomRoute(rng, complexityLevel)
       const orderId = `ORD-${String(gameState.totalOrdersGenerated + 1).padStart(3, '0')}`
       
+      // Select a random customer for this order
+      const randomCustomer = gameState.customers[rng.between(0, gameState.customers.length - 1)]
+      
+      // Generate order value based on complexity and customer tier
+      const baseValue = route.length * 150 // Base value per step
+      const tierMultiplier = randomCustomer.tier === 'vip' ? 1.5 : randomCustomer.tier === 'premium' ? 1.3 : 1.0
+      const orderValue = Math.round(baseValue * tierMultiplier * rng.between(0.8, 1.4))
+      
+      // Determine priority based on customer tier and random factors
+      let priority: 'low' | 'normal' | 'high' | 'urgent'
+      if (randomCustomer.tier === 'vip') {
+        priority = rng.between(0, 100) < 40 ? 'urgent' : 'high'
+      } else if (randomCustomer.tier === 'premium') {
+        priority = rng.between(0, 100) < 30 ? 'high' : 'normal'
+      } else {
+        priority = rng.between(0, 100) < 10 ? 'high' : 'normal'
+      }
+      
+      // Check for rush order
+      const isRushOrder = rng.between(0, 100) < (randomCustomer.tier === 'vip' ? 15 : 5)
+      
       newOrders.push({
         id: orderId,
+        customerId: randomCustomer.id,
+        customerName: randomCustomer.name,
+        priority,
+        orderValue,
+        specialInstructions: isRushOrder ? 'RUSH ORDER - Expedited processing required' : '',
+        rushOrder: isRushOrder,
         dueDate: new Date(Date.now() + rng.between(90, 240) * 60 * 1000), // 1.5-4 hours
         route,
         currentStepIndex: -1,
@@ -79,6 +107,66 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
 
     return { ...order, slaStatus }
   }, [])
+
+  // R07: Generate random events (equipment failures, rush orders, etc.)
+  const generateRandomEvents = useCallback((departments: Department[]): GameEvent[] => {
+    if (!gameState.session.settings.enableEvents) return []
+    
+    const events: GameEvent[] = []
+    const rng = rngRef.current
+    
+    // Equipment failure event (0.1% chance per second)
+    if (rng.next() < 0.001) {
+      const affectedDept = rng.choice(departments.filter(d => d.status !== 'maintenance'))
+      if (affectedDept) {
+        events.push({
+          id: `event-${Date.now()}-${Math.random()}`,
+          type: 'equipment-failure',
+          timestamp: new Date(),
+          message: `Equipment failure in ${affectedDept.name}! Processing slowed by 50%`,
+          severity: 'error',
+          departmentId: affectedDept.id
+        })
+      }
+    }
+
+    // Rush order event (0.05% chance per second)
+    if (rng.next() < 0.0005) {
+      events.push({
+        id: `event-${Date.now()}-${Math.random()}`,
+        type: 'rush-order',
+        timestamp: new Date(),
+        message: `Rush order received! Tight deadline requires priority handling`,
+        severity: 'warning'
+      })
+    }
+
+    // Delivery delay event (0.02% chance per second)
+    if (rng.next() < 0.0002) {
+      events.push({
+        id: `event-${Date.now()}-${Math.random()}`,
+        type: 'delivery-delay',
+        timestamp: new Date(),
+        message: `Material delivery delayed. Some departments may experience shortages`,
+        severity: 'warning'
+      })
+    }
+
+    // Efficiency boost event (0.03% chance per second)
+    if (rng.next() < 0.0003) {
+      const boostedDept = rng.choice(departments)
+      events.push({
+        id: `event-${Date.now()}-${Math.random()}`,
+        type: 'efficiency-boost',
+        timestamp: new Date(),
+        message: `${boostedDept.name} running at peak efficiency! 25% speed boost`,
+        severity: 'success',
+        departmentId: boostedDept.id
+      })
+    }
+
+    return events
+  }, [gameState.session.settings.enableEvents])
 
   // Process department operations
   const processDepartmentUpdates = useCallback((departments: Department[]): {
@@ -271,6 +359,10 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
       // Process department updates
       const { updatedDepartments, completedOrders, events } = processDepartmentUpdates(prevState.departments)
 
+      // R07: Generate random events
+      const randomEvents = generateRandomEvents(updatedDepartments)
+      const allEvents = [...events, ...randomEvents]
+
       // Update performance metrics
       const totalCompleted = prevState.completedOrders.length + completedOrders.length
       const onTimeCompleted = [...prevState.completedOrders, ...completedOrders]
@@ -299,7 +391,7 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
         pendingOrders: [...updatedPendingOrders, ...newOrders],
         completedOrders: [...prevState.completedOrders, ...completedOrders],
         totalOrdersGenerated: prevState.totalOrdersGenerated + newOrders.length,
-        gameEvents: [...prevState.gameEvents, ...events].slice(-50), // Keep last 50 events
+        gameEvents: [...prevState.gameEvents, ...allEvents].slice(-50), // Keep last 50 events
         performance: {
           onTimeDeliveryRate,
           averageLeadTime,
@@ -343,6 +435,31 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
     rngRef.current = new SeededRandom(initialSettings.randomSeed)
   }, [initialSettings])
 
+  // R13: Record decisions for undo/redo
+  const recordDecision = useCallback((
+    type: 'order-release' | 'game-pause' | 'game-resume' | 'settings-change',
+    description: string,
+    orderId?: string,
+    previousState?: Partial<GameState>
+  ) => {
+    const decision: Decision = {
+      id: `decision-${Date.now()}-${Math.random()}`,
+      timestamp: new Date(),
+      type,
+      description,
+      orderId,
+      previousState,
+      canUndo: true
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      decisions: [...prev.decisions.slice(0, currentDecisionIndex + 1), decision]
+    }))
+    
+    setCurrentDecisionIndex(prev => prev + 1)
+  }, [currentDecisionIndex])
+
   // Release order from pending to first department
   const releaseOrder = useCallback((orderId: string) => {
     setGameState(prev => {
@@ -368,13 +485,26 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
 
       const updatedPendingOrders = prev.pendingOrders.filter((_, index) => index !== orderIndex)
 
-      return {
+      const newState = {
         ...prev,
         departments: updatedDepartments,
         pendingOrders: updatedPendingOrders
       }
+
+      // Record decision for undo/redo
+      recordDecision(
+        'order-release',
+        `Released order ${orderId} to ${prev.departments.find(d => d.id === firstDeptId)?.name}`,
+        orderId,
+        {
+          departments: prev.departments,
+          pendingOrders: prev.pendingOrders
+        }
+      )
+
+      return newState
     })
-  }, [])
+  }, [recordDecision])
 
   // Effect to handle simulation loop
   useEffect(() => {
@@ -401,12 +531,51 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
     }
   }, [gameState.session.status])
 
+  // R13: Undo/redo functionality
+  const undoLastDecision = useCallback(() => {
+    if (currentDecisionIndex >= 0 && gameState.decisions.length > 0) {
+      const decision = gameState.decisions[currentDecisionIndex]
+      if (decision.canUndo && decision.previousState) {
+        setGameState(prev => ({
+          ...prev,
+          ...decision.previousState
+        }))
+        setCurrentDecisionIndex(prev => prev - 1)
+      }
+    }
+  }, [currentDecisionIndex, gameState.decisions])
+
+  const redoLastDecision = useCallback(() => {
+    if (currentDecisionIndex < gameState.decisions.length - 1) {
+      const nextDecision = gameState.decisions[currentDecisionIndex + 1]
+      if (nextDecision.newState) {
+        setGameState(prev => ({
+          ...prev,
+          ...nextDecision.newState
+        }))
+        setCurrentDecisionIndex(prev => prev + 1)
+      }
+    }
+  }, [currentDecisionIndex, gameState.decisions])
+
+  const clearDecisionHistory = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      decisions: []
+    }))
+    setCurrentDecisionIndex(-1)
+  }, [])
+
   return {
     gameState,
     isRunning,
+    currentDecisionIndex,
     startGame,
     pauseGame,
     resetGame,
-    releaseOrder
+    releaseOrder,
+    undoLastDecision,
+    redoLastDecision,
+    clearDecisionHistory
   }
 }

@@ -1,4 +1,4 @@
-import { Play, Pause, RotateCcw, Clock, Users, Factory, TrendingUp } from 'lucide-react'
+import { Play, Pause, RotateCcw, Clock, Users, Factory, TrendingUp, Settings, Download } from 'lucide-react'
 import type { GameSession, GamePerformance } from '../types'
 
 interface GameControlsProps {
@@ -7,7 +7,9 @@ interface GameControlsProps {
   onStart: () => void
   onPause: () => void
   onReset: () => void
-  isRunning: boolean
+  onOpenSettings?: () => void
+  onOpenExport?: () => void
+  onOpenQuickStart?: () => void
 }
 
 export default function GameControls({ 
@@ -15,8 +17,11 @@ export default function GameControls({
   performance, 
   onStart, 
   onPause, 
-  onReset
-}: Omit<GameControlsProps, 'isRunning'>) {
+  onReset,
+  onOpenSettings,
+  onOpenExport,
+  onOpenQuickStart
+}: GameControlsProps) {
   
   const formatTimeRemaining = (milliseconds: number): string => {
     if (milliseconds <= 0) return "00:00"
@@ -78,6 +83,39 @@ export default function GameControls({
         
         {/* Control Buttons */}
         <div className="flex items-center space-x-3">
+          {/* Quick Start Button */}
+          {session.status === 'setup' && onOpenQuickStart && (
+            <button 
+              onClick={onOpenQuickStart}
+              className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              <Play size={16} />
+              <span>Quick Start</span>
+            </button>
+          )}
+
+          {/* Settings Button */}
+          {onOpenSettings && (
+            <button 
+              onClick={onOpenSettings}
+              className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <Settings size={16} />
+              <span>Settings</span>
+            </button>
+          )}
+
+          {/* Export Button */}
+          {onOpenExport && (
+            <button 
+              onClick={onOpenExport}
+              className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <Download size={16} />
+              <span>Export</span>
+            </button>
+          )}
+          
           {session.status === 'setup' && (
             <button 
               onClick={onStart}

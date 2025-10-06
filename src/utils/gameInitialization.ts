@@ -1,4 +1,4 @@
-import type { GameSettings, GameState, GameSession, Department, Order, GamePerformance, DepartmentOperation } from '../types'
+import type { GameSettings, GameState, GameSession, Department, Order, GamePerformance } from '../types'
 
 // Random number generator with seed support
 class SeededRandom {
@@ -48,13 +48,28 @@ export const generateInitialWIP = (rng: SeededRandom, complexityLevel: string): 
                    complexityLevel === 'intermediate' ? rng.between(4, 8) : 
                    rng.between(6, 12)
 
+  // Sample customers for WIP generation
+  const customers = [
+    { id: 'CUST-001', name: 'Acme Manufacturing', tier: 'vip' },
+    { id: 'CUST-002', name: 'TechCorp Solutions', tier: 'premium' },
+    { id: 'CUST-003', name: 'Global Industries', tier: 'standard' }
+  ]
+
+  const priorities = ['low', 'normal', 'high', 'urgent']
+
   const orders: Order[] = []
   for (let i = 0; i < wipCount; i++) {
     const route = generateRandomRoute(rng, complexityLevel)
     const currentStep = Math.floor(rng.between(0, route.length))
+    const customer = rng.choice(customers)
+    const priority = rng.choice(priorities) as 'low' | 'normal' | 'high' | 'urgent'
     
     orders.push({
       id: `WIP-${String(i + 1).padStart(3, '0')}`,
+      customerId: customer.id,
+      customerName: customer.name,
+      priority,
+      orderValue: rng.between(3000, 15000),
       dueDate: new Date(Date.now() + rng.between(30, 120) * 60 * 1000), // 30-120 minutes
       route,
       currentStepIndex: currentStep,
@@ -65,7 +80,8 @@ export const generateInitialWIP = (rng: SeededRandom, complexityLevel: string): 
       processingTime: Math.floor(rng.between(15, 45)), // 15-45 minutes for current step
       processingTimeRemaining: Math.floor(rng.between(5, 30)), // 5-30 minutes remaining
       currentDepartment: route[currentStep],
-      slaStatus: rng.next() < 0.7 ? 'on-track' : rng.next() < 0.8 ? 'at-risk' : 'overdue'
+      slaStatus: rng.next() < 0.7 ? 'on-track' : rng.next() < 0.8 ? 'at-risk' : 'overdue',
+      rushOrder: priority === 'urgent' && rng.next() < 0.2
     })
   }
 
@@ -179,12 +195,36 @@ export const generateInitialOrders = (settings: GameSettings): Order[] => {
                      settings.complexityLevel === 'intermediate' ? rng.between(5, 10) : 
                      rng.between(8, 15)
 
+  // Sample customers for order generation
+  const customers = [
+    { id: 'CUST-001', name: 'Acme Manufacturing', tier: 'vip' },
+    { id: 'CUST-002', name: 'TechCorp Solutions', tier: 'premium' },
+    { id: 'CUST-003', name: 'Global Industries', tier: 'standard' },
+    { id: 'CUST-004', name: 'Precision Parts Ltd', tier: 'premium' },
+    { id: 'CUST-005', name: 'Quick Delivery Co', tier: 'standard' }
+  ]
+
+  const priorities = ['low', 'normal', 'high', 'urgent']
+
   const orders: Order[] = []
   for (let i = 0; i < orderCount; i++) {
     const route = generateRandomRoute(rng, settings.complexityLevel)
+    const customer = rng.choice(customers)
+    const priority = rng.choice(priorities) as 'low' | 'normal' | 'high' | 'urgent'
+    const isRush = priority === 'urgent' && rng.next() < 0.3 // 30% chance for urgent orders to be rush
     
+    // Order value based on priority and customer tier
+    const baseValue = rng.between(2000, 20000)
+    const tierMultiplier = customer.tier === 'vip' ? 1.5 : customer.tier === 'premium' ? 1.2 : 1.0
+    const priorityMultiplier = priority === 'urgent' ? 1.3 : priority === 'high' ? 1.1 : 1.0
+    const orderValue = Math.floor(baseValue * tierMultiplier * priorityMultiplier)
+
     orders.push({
       id: `ORD-${String(i + 1).padStart(3, '0')}`,
+      customerId: customer.id,
+      customerName: customer.name,
+      priority,
+      orderValue,
       dueDate: new Date(Date.now() + rng.between(60, 180) * 60 * 1000), // 1-3 hours
       route,
       currentStepIndex: -1, // Not started yet
@@ -192,7 +232,10 @@ export const generateInitialOrders = (settings: GameSettings): Order[] => {
       timestamps: [],
       reworkCount: 0,
       createdAt: new Date(),
-      slaStatus: 'on-track'
+      slaStatus: 'on-track',
+      rushOrder: isRush,
+      specialInstructions: isRush ? 'URGENT - Priority handling required' : 
+                          customer.tier === 'vip' ? 'VIP customer - ensure quality' : undefined
     })
   }
 
@@ -256,7 +299,74 @@ export const initializeGameState = (settings: GameSettings): GameState => {
       message: `Game initialized with ${pendingOrders.length} pending orders and ${wipOrders.length} WIP orders`,
       severity: 'info'
     }],
-    performance: initialPerformance
+    performance: initialPerformance,
+    sessionLog: {
+      sessionId: session.id,
+      startTime: new Date(),
+      endTime: undefined,
+      settings: settings,
+      events: [],
+      finalPerformance: initialPerformance,
+      decisions: []
+    },
+    decisions: [],
+    forecastData: {
+      averageLeadTime: 45, // Initial estimate in minutes
+      capacityUtilization: 0.7, // 70% average utilization
+      expectedDeliveryDates: {},
+      bottleneckDepartment: null,
+      wipCapacity: departments.reduce((acc, dept) => {
+        acc[dept.id] = dept.capacity
+        return acc
+      }, {} as { [key: number]: number })
+    },
+    customers: [
+      {
+        id: 'CUST-001',
+        name: 'Acme Manufacturing',
+        tier: 'vip',
+        contactEmail: 'orders@acme-mfg.com',
+        totalOrders: 45,
+        onTimeDeliveryRate: 92.5,
+        averageOrderValue: 15000
+      },
+      {
+        id: 'CUST-002', 
+        name: 'TechCorp Solutions',
+        tier: 'premium',
+        contactEmail: 'procurement@techcorp.com',
+        totalOrders: 28,
+        onTimeDeliveryRate: 88.2,
+        averageOrderValue: 8500
+      },
+      {
+        id: 'CUST-003',
+        name: 'Global Industries',
+        tier: 'standard',
+        contactEmail: 'orders@global-ind.com',
+        totalOrders: 67,
+        onTimeDeliveryRate: 85.7,
+        averageOrderValue: 5200
+      },
+      {
+        id: 'CUST-004',
+        name: 'Precision Parts Ltd',
+        tier: 'premium',
+        contactEmail: 'purchasing@precision-parts.com',
+        totalOrders: 34,
+        onTimeDeliveryRate: 91.1,
+        averageOrderValue: 12300
+      },
+      {
+        id: 'CUST-005',
+        name: 'Quick Delivery Co',
+        tier: 'standard',
+        contactEmail: 'rush@quickdelivery.com',
+        totalOrders: 23,
+        onTimeDeliveryRate: 79.8,
+        averageOrderValue: 6800
+      }
+    ]
   }
 }
 

@@ -1,25 +1,40 @@
 import { useState } from 'react'
-import { Package, Factory, ShoppingCart, Users, Play, Eye, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
-import type { Order, Department, CustomerFilter, GameSettings } from '../types'
-import { GameControls } from '../components'
+import { Package, Factory, ShoppingCart, Play, Eye, TrendingUp, XCircle } from 'lucide-react'
+import type { Order, Department, GameSettings } from '../types'
+import { GameControls, GameSettingsModal, ExportControls, DeliveryForecast, RandomEventsDisplay, UndoRedoControls, QuickStartScenarios, CustomerOrderManager } from '../components'
 import { useGameSimulation } from '../hooks/useGameSimulation'
 
 export default function GameScreen() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
   const [previewRoute, setPreviewRoute] = useState<number[]>([])
-  const [customerFilter, setCustomerFilter] = useState<CustomerFilter>('all')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [showForecast, setShowForecast] = useState(false)
+  const [quickStartOpen, setQuickStartOpen] = useState(false)
   
   // Game settings - in a real app, these might come from a setup screen
-  const gameSettings: GameSettings = {
-    sessionDuration: 20, // 20 minutes for testing
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    sessionDuration: 30, // 30 minutes for compliance with R05
+    gameSpeed: 1.0, // Normal speed
     orderGenerationRate: 'medium',
     complexityLevel: 'intermediate',
+    enableEvents: true, // Enable random events per R07
     randomSeed: 'demo-seed-123'
-  }
+  })
 
   // Use the game simulation hook
-  const { gameState, startGame, pauseGame, resetGame, releaseOrder } = useGameSimulation(gameSettings)
+  const { 
+    gameState, 
+    currentDecisionIndex,
+    startGame, 
+    pauseGame, 
+    resetGame, 
+    releaseOrder,
+    undoLastDecision,
+    redoLastDecision,
+    clearDecisionHistory
+  } = useGameSimulation(gameSettings)
 
   const previewOrderRoute = (order: Order) => {
     setPreviewRoute(order.route)
@@ -34,18 +49,6 @@ export default function GameScreen() {
   const handleReleaseOrder = (orderId: string) => {
     releaseOrder(orderId)
   }
-
-  const filteredCustomerOrders = (() => {
-    const allCompleted = [...gameState.completedOrders, ...gameState.rejectedOrders]
-    switch (customerFilter) {
-      case 'completed':
-        return allCompleted.filter(order => order.status === 'completed-on-time' || order.status === 'completed-late')
-      case 'rejected':
-        return allCompleted.filter(order => order.status === 'error')
-      default:
-        return allCompleted
-    }
-  })()
 
   const getDepartmentStatus = (dept: Department) => {
     switch (dept.status) {
@@ -87,7 +90,41 @@ export default function GameScreen() {
         onStart={startGame}
         onPause={pauseGame}
         onReset={resetGame}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenExport={() => setExportOpen(true)}
+        onOpenQuickStart={() => setQuickStartOpen(true)}
       />
+
+      {/* Forecast Toggle Button */}
+      <div className="mb-4">
+        <button
+          onClick={() => setShowForecast(!showForecast)}
+          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <TrendingUp size={16} />
+          <span>{showForecast ? 'Hide' : 'Show'} Delivery Forecast</span>
+        </button>
+      </div>
+
+      {/* Random Events Display (R07) */}
+      <RandomEventsDisplay 
+        events={gameState.gameEvents}
+        onDismissEvent={(eventId) => {
+          // Optional: Add dismiss functionality
+          console.log('Dismissing event:', eventId)
+        }}
+      />
+
+      {/* Undo/Redo Controls (R13) */}
+      <div className="mb-6">
+        <UndoRedoControls
+          decisions={gameState.decisions}
+          currentDecisionIndex={currentDecisionIndex}
+          onUndo={undoLastDecision}
+          onRedo={redoLastDecision}
+          onClearHistory={clearDecisionHistory}
+        />
+      </div>
 
       {/* Top Row Cards */}
       <div className="grid grid-cols-2 gap-8 mb-8">
@@ -300,66 +337,12 @@ export default function GameScreen() {
         </div>
       </div>
 
-      {/* Customer Card */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-gray-800">Customer Orders</h3>
-          <Users className="w-8 h-8 text-green-600" />
-        </div>
-        
-        <div className="flex space-x-2 mb-6">
-          {(['all', 'completed', 'rejected'] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setCustomerFilter(filter)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                customerFilter === filter 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </button>
-          ))}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-64 overflow-y-auto">
-          {filteredCustomerOrders.map((order) => (
-            <div 
-              key={order.id}
-              className="p-4 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-md"
-              onClick={() => openOrderDetail(order)}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-sm font-semibold">{order.id}</span>
-                {order.status === 'completed-on-time' ? (
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                ) : order.status === 'completed-late' ? (
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-red-600" />
-                )}
-              </div>
-              
-              <div className="space-y-1 text-sm text-gray-600">
-                <div>Route: {order.route.join(' → ')}</div>
-                {order.actualLeadTime && (
-                  <div className={`font-medium ${
-                    order.status === 'completed-on-time' ? 'text-green-600' : 
-                    order.status === 'completed-late' ? 'text-amber-600' : 
-                    'text-red-600'
-                  }`}>
-                    Lead Time: {order.actualLeadTime}min
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {filteredCustomerOrders.length === 0 && (
-            <p className="text-gray-500 text-center py-8 col-span-full">No orders to display</p>
-          )}
-        </div>
-      </div>
+      {/* Enhanced Customer Order Management (R01-R03) */}
+      <CustomerOrderManager
+        orders={[...gameState.pendingOrders, ...gameState.completedOrders, ...gameState.rejectedOrders]}
+        customers={gameState.customers}
+        onReleaseOrder={handleReleaseOrder}
+      />
 
       {/* Order Detail Drawer */}
       {detailDrawerOpen && selectedOrder && (
@@ -428,6 +411,44 @@ export default function GameScreen() {
           </div>
         </div>
       )}
+
+      {/* Modals */}
+      <GameSettingsModal
+        currentSettings={gameSettings}
+        onUpdateSettings={setGameSettings}
+        onClose={() => setSettingsOpen(false)}
+        isOpen={settingsOpen}
+      />
+
+      {exportOpen && (
+        <ExportControls
+          gameState={gameState}
+          onExport={(format) => {
+            console.log(`Exporting data in ${format} format`)
+            // Export functionality would be implemented here
+            setExportOpen(false)
+          }}
+        />
+      )}
+
+      {showForecast && (
+        <DeliveryForecast
+          forecastData={gameState.forecastData}
+          pendingOrders={gameState.pendingOrders}
+        />
+      )}
+
+      {/* Quick Start Scenarios Modal (R08) */}
+      <QuickStartScenarios
+        isOpen={quickStartOpen}
+        onSelectScenario={(settings) => {
+          setGameSettings(settings)
+          setQuickStartOpen(false)
+          // Automatically start the game after scenario selection
+          setTimeout(() => startGame(), 100)
+        }}
+        onClose={() => setQuickStartOpen(false)}
+      />
     </div>
   )
 }

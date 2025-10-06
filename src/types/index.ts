@@ -2,6 +2,10 @@
 
 export interface Order {
   id: string
+  customerId: string // R01: Customer identification
+  customerName: string // R01: Customer name for display
+  priority: 'low' | 'normal' | 'high' | 'urgent' // R02: Priority levels
+  orderValue: number // R02: Order value in currency
   dueDate: Date
   route: number[]
   currentStepIndex: number
@@ -17,6 +21,8 @@ export interface Order {
   currentDepartment?: number
   currentOperationIndex?: number // For tracking multi-step department operations
   operationProgress?: OperationProgress[] // Track progress through department operations
+  specialInstructions?: string // R03: Special handling requirements
+  rushOrder?: boolean // R03: Rush order flag
 }
 
 export interface OperationProgress {
@@ -52,7 +58,19 @@ export interface DepartmentOperation {
   description: string
 }
 
-export type CustomerFilter = 'all' | 'completed' | 'rejected'
+// R01-R03: Customer management interfaces
+export interface Customer {
+  id: string
+  name: string
+  tier: 'standard' | 'premium' | 'vip' // Customer tier affects priority
+  contactEmail: string
+  totalOrders: number
+  onTimeDeliveryRate: number // Historical performance
+  averageOrderValue: number
+}
+
+export type CustomerFilter = 'all' | 'completed' | 'rejected' | 'high-priority' | 'rush-orders' | 'by-customer'
+export type OrderPriority = 'low' | 'normal' | 'high' | 'urgent'
 export type StatisticsFilter = 'order-doorlooptijd' | 'doorlooptijd-per-werkplek' | 'orderdoorlooptijd-per-afdeling'
 export type ScreenType = 'landing' | 'game' | 'analytics'
 export type NavigationScreen = 'game' | 'analytics'
@@ -69,10 +87,12 @@ export interface GameSession {
 }
 
 export interface GameSettings {
-  sessionDuration: 20 | 30 // minutes
+  sessionDuration: 15 | 30 | 60 // minutes - R05: 15min, 30min, 1hr options
   orderGenerationRate: 'low' | 'medium' | 'high'
   complexityLevel: 'beginner' | 'intermediate' | 'advanced'
   randomSeed?: string // for reproducible scenarios
+  gameSpeed: 1 | 2 | 4 | 8 // Speed multiplier - R05: speed control
+  enableEvents: boolean // R07: equipment failure, delivery delays
 }
 
 export interface GameState {
@@ -84,16 +104,54 @@ export interface GameState {
   totalOrdersGenerated: number
   gameEvents: GameEvent[]
   performance: GamePerformance
+  sessionLog: SessionLog // R12: Complete session logging
+  decisions: Decision[] // R13: Decision history for undo/redo
+  forecastData: ForecastData // R04: Delivery forecast based on WIP capacity
+  customers: Customer[] // R01: Customer data management
+}
+
+// R04: Forecast for delivery dates based on current WIP capacity
+export interface ForecastData {
+  averageLeadTime: number
+  capacityUtilization: number
+  expectedDeliveryDates: { [orderId: string]: Date }
+  bottleneckDepartment: number | null
+  wipCapacity: { [deptId: number]: number }
 }
 
 export interface GameEvent {
   id: string
-  type: 'order-generated' | 'order-completed' | 'order-late' | 'equipment-failure' | 'rush-order'
+  type: 'order-generated' | 'order-completed' | 'order-late' | 'equipment-failure' | 'rush-order' | 'delivery-delay' | 'efficiency-boost' | 'order-released' | 'game-started' | 'game-paused' | 'decision-made'
   timestamp: Date
   message: string
   severity: 'info' | 'warning' | 'error' | 'success'
   departmentId?: number
   orderId?: string
+  decisionId?: string // R12: decision tracking
+  kpiSnapshot?: GamePerformance // R12: KPI snapshot at event time
+}
+
+// R12: Session logging for CSV/JSON export
+export interface SessionLog {
+  sessionId: string
+  startTime: Date
+  endTime?: Date
+  settings: GameSettings
+  events: GameEvent[]
+  finalPerformance: GamePerformance
+  decisions: Decision[]
+}
+
+// R13: Decision tracking for undo/redo functionality
+export interface Decision {
+  id: string
+  timestamp: Date
+  type: 'order-release' | 'game-pause' | 'game-resume' | 'settings-change'
+  description: string
+  previousState?: Partial<GameState>
+  newState?: Partial<GameState>
+  orderId?: string
+  canUndo: boolean
 }
 
 export interface GamePerformance {
