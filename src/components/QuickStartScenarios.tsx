@@ -30,6 +30,7 @@ const scenarios: Scenario[] = [
       orderGenerationRate: 'low',
       complexityLevel: 'beginner',
       enableEvents: false,
+      enableAdvancedRouting: false,
       randomSeed: 'tutorial-seed'
     },
     learningObjectives: [
@@ -46,10 +47,11 @@ const scenarios: Scenario[] = [
     difficulty: 'intermediate',
     settings: {
       sessionDuration: 30,
-      gameSpeed: 1.0,
+      gameSpeed: 1,
       orderGenerationRate: 'medium',
       complexityLevel: 'intermediate',
       enableEvents: true,
+      enableAdvancedRouting: true,
       randomSeed: 'balanced-seed'
     },
     learningObjectives: [
@@ -66,10 +68,11 @@ const scenarios: Scenario[] = [
     difficulty: 'advanced',
     settings: {
       sessionDuration: 15,
-      gameSpeed: 2.0,
+      gameSpeed: 2,
       orderGenerationRate: 'high',
       complexityLevel: 'advanced',
       enableEvents: true,
+      enableAdvancedRouting: true,
       randomSeed: 'rush-seed'
     },
     learningObjectives: [
@@ -90,6 +93,7 @@ const scenarios: Scenario[] = [
       orderGenerationRate: 'medium',
       complexityLevel: 'advanced',
       enableEvents: true,
+      enableAdvancedRouting: true,
       randomSeed: 'endurance-seed'
     },
     learningObjectives: [

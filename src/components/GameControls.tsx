@@ -98,9 +98,10 @@ export default function GameControls({
           {onOpenSettings && (
             <button 
               onClick={onOpenSettings}
-              className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              aria-label="Open game settings"
             >
-              <Settings size={16} />
+              <Settings size={16} aria-hidden="true" />
               <span>Settings</span>
             </button>
           )}
@@ -109,9 +110,10 @@ export default function GameControls({
           {onOpenExport && (
             <button 
               onClick={onOpenExport}
-              className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+              className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              aria-label="Export game data and analytics"
             >
-              <Download size={16} />
+              <Download size={16} aria-hidden="true" />
               <span>Export</span>
             </button>
           )}
@@ -119,9 +121,10 @@ export default function GameControls({
           {session.status === 'setup' && (
             <button 
               onClick={onStart}
-              className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md"
+              className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              aria-label="Start the manufacturing simulation game"
             >
-              <Play size={20} />
+              <Play size={20} aria-hidden="true" />
               <span>Start Game</span>
             </button>
           )}
@@ -129,9 +132,10 @@ export default function GameControls({
           {session.status === 'running' && (
             <button 
               onClick={onPause}
-              className="flex items-center space-x-2 bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors font-medium shadow-md"
+              className="flex items-center space-x-2 bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors font-medium shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+              aria-label="Pause the game simulation"
             >
-              <Pause size={20} />
+              <Pause size={20} aria-hidden="true" />
               <span>Pause</span>
             </button>
           )}
@@ -139,18 +143,20 @@ export default function GameControls({
           {session.status === 'paused' && (
             <button 
               onClick={onStart}
-              className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md"
+              className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              aria-label="Resume the game simulation"
             >
-              <Play size={20} />
+              <Play size={20} aria-hidden="true" />
               <span>Resume</span>
             </button>
           )}
           
           <button 
             onClick={onReset}
-            className="flex items-center space-x-2 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium shadow-md"
+            className="flex items-center space-x-2 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            aria-label="Reset the game to start over"
           >
-            <RotateCcw size={20} />
+            <RotateCcw size={20} aria-hidden="true" />
             <span>Reset</span>
           </button>
         </div>
@@ -159,10 +165,18 @@ export default function GameControls({
       {/* Progress Bar */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">Session Progress</span>
+          <span className="text-sm font-medium text-gray-700" id="session-progress-label">Session Progress</span>
           <span className="text-sm text-gray-500">{Math.round(sessionProgress)}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div 
+          className="w-full bg-gray-200 rounded-full h-3"
+          role="progressbar"
+          aria-labelledby="session-progress-label"
+          aria-valuenow={sessionProgress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuetext={`${Math.round(sessionProgress)}% complete`}
+        >
           <div 
             className="bg-blue-500 h-3 rounded-full transition-all duration-1000 ease-linear"
             style={{ width: `${Math.min(sessionProgress, 100)}%` }}

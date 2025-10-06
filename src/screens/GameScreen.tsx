@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Package, Factory, ShoppingCart, Play, Eye, TrendingUp, XCircle } from 'lucide-react'
 import type { Order, Department, GameSettings } from '../types'
-import { GameControls, GameSettingsModal, ExportControls, DeliveryForecast, RandomEventsDisplay, UndoRedoControls, QuickStartScenarios, CustomerOrderManager } from '../components'
+import { GameControls, GameSettingsModal, ExportControls, DeliveryForecast, RandomEventsDisplay, UndoRedoControls, QuickStartScenarios, CustomerOrderManager, RouteOptimizer, CapacityPlanner, LearningAnalytics, PerformanceDashboard } from '../components'
 import { useGameSimulation } from '../hooks/useGameSimulation'
 
 export default function GameScreen() {
@@ -16,10 +16,11 @@ export default function GameScreen() {
   // Game settings - in a real app, these might come from a setup screen
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     sessionDuration: 30, // 30 minutes for compliance with R05
-    gameSpeed: 1.0, // Normal speed
+    gameSpeed: 1, // Normal speed
     orderGenerationRate: 'medium',
     complexityLevel: 'intermediate',
     enableEvents: true, // Enable random events per R07
+    enableAdvancedRouting: true, // Enable advanced routing per R06
     randomSeed: 'demo-seed-123'
   })
 
@@ -31,6 +32,8 @@ export default function GameScreen() {
     pauseGame, 
     resetGame, 
     releaseOrder,
+    scheduleOrder,
+    rebalanceWorkload,
     undoLastDecision,
     redoLastDecision,
     clearDecisionHistory
@@ -343,6 +346,113 @@ export default function GameScreen() {
         customers={gameState.customers}
         onReleaseOrder={handleReleaseOrder}
       />
+
+      {/* Advanced Route Optimizer (R06) */}
+      {gameState.session.settings.enableAdvancedRouting && (
+        <div className="mb-8">
+          <RouteOptimizer
+            orders={[...gameState.pendingOrders, ...gameState.departments.flatMap(d => [...d.queue, ...(d.inProcess ? [d.inProcess] : [])])]}
+            departments={gameState.departments}
+            onSelectAlternativeRoute={(orderId, routeIndex) => {
+              // Find the alternative route from the RouteOptimizer's generated alternatives
+              // For now, use optimizeOrderRoute to apply the change
+              console.log('Selecting alternative route for order:', orderId, 'route index:', routeIndex)
+              // TODO: In a full implementation, we'd need the actual alternative route data
+              // optimizeOrderRoute(orderId, newRoute)
+            }}
+          />
+        </div>
+      )}
+
+      {/* Capacity Planner (R04-R05) */}
+      <div className="mb-8">
+        <CapacityPlanner
+          gameState={gameState}
+          onScheduleOrder={(orderId, departmentId, scheduledTime) => {
+            scheduleOrder(orderId, departmentId, scheduledTime)
+          }}
+          onRebalanceWorkload={(plan) => {
+            rebalanceWorkload(plan.sourceIds, plan.targetIds, plan.ordersToMove)
+          }}
+        />
+      </div>
+
+      {/* Learning Analytics (R12) */}
+      <div className="mb-8">
+        <LearningAnalytics
+          gameState={gameState}
+          onExportProgress={() => {
+            console.log('Exporting learning progress data')
+            // Export learning analytics data
+            const analyticsData = {
+              sessionMetrics: {
+                onTimeDeliveryRate: gameState.performance.onTimeDeliveryRate,
+                totalOrders: gameState.totalOrdersGenerated,
+                avgLeadTime: gameState.performance.averageLeadTime,
+                resourceUtilization: gameState.departments.reduce((sum, d) => sum + d.utilization, 0) / gameState.departments.length
+              },
+              achievements: [], // Generated achievements would be here
+              skillAssessments: [], // Generated skill assessments
+              timestamp: new Date().toISOString()
+            }
+            
+            // In a real implementation, this would save/export the data
+            const blob = new Blob([JSON.stringify(analyticsData, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `learning-analytics-${Date.now()}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+        />
+      </div>
+
+      {/* Performance Dashboard (R09-R11) */}
+      <div className="mb-8">
+        <PerformanceDashboard
+          gameState={gameState}
+          onExportMetrics={() => {
+            console.log('Exporting performance metrics')
+            // Export comprehensive performance data
+            const metricsData = {
+              kpiMetrics: {
+                onTimeDeliveryRate: gameState.performance.onTimeDeliveryRate,
+                averageLeadTime: gameState.performance.averageLeadTime,
+                totalThroughput: gameState.performance.totalThroughput,
+                utilizationRates: gameState.performance.utilizationRates,
+                bottleneckDepartment: gameState.performance.bottleneckDepartment
+              },
+              departmentPerformance: gameState.departments.map(d => ({
+                id: d.id,
+                name: d.name,
+                utilization: d.utilization,
+                avgCycleTime: d.avgCycleTime,
+                totalProcessed: d.totalProcessed,
+                queueLength: d.queue.length,
+                efficiency: d.efficiency,
+                equipmentCondition: d.equipmentCondition,
+                status: d.status
+              })),
+              benchmarkComparison: {
+                industryStandards: true,
+                competitorAnalysis: true
+              },
+              timestamp: new Date().toISOString(),
+              sessionDuration: gameState.session.elapsedTime
+            }
+            
+            // In a real implementation, this would save/export the data
+            const blob = new Blob([JSON.stringify(metricsData, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `performance-metrics-${Date.now()}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+        />
+      </div>
 
       {/* Order Detail Drawer */}
       {detailDrawerOpen && selectedOrder && (

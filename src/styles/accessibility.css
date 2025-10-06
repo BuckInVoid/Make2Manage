@@ -1,0 +1,310 @@
+/* Accessibility Enhancements for Tailwind CSS */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --accessibility-base-font-size: 0.875rem;
+    --accessibility-zoom: 100%;
+    --accessibility-filter: none;
+  }
+
+  /* Screen Reader Only Content */
+  .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .focus\:not-sr-only:focus {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: inherit !important;
+    margin: inherit !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+  }
+}
+
+@layer components {
+  /* High Contrast Mode */
+  .accessibility-high-contrast {
+    filter: contrast(150%) brightness(1.2);
+  }
+
+  .accessibility-high-contrast * {
+    border-width: 2px !important;
+  }
+
+  .accessibility-high-contrast .bg-white {
+    @apply bg-black text-white;
+  }
+
+  .accessibility-high-contrast .bg-gray-50 {
+    @apply bg-gray-900 text-white;
+  }
+
+  .accessibility-high-contrast .bg-gray-100 {
+    @apply bg-gray-800 text-white;
+  }
+
+  .accessibility-high-contrast .text-gray-600 {
+    @apply text-white;
+  }
+
+  .accessibility-high-contrast .text-gray-700 {
+    @apply text-white;
+  }
+
+  .accessibility-high-contrast .text-gray-800 {
+    @apply text-white;
+  }
+
+  .accessibility-high-contrast .border-gray-200 {
+    @apply border-white;
+  }
+
+  .accessibility-high-contrast .border-gray-300 {
+    @apply border-white;
+  }
+
+  /* Enhanced Focus Indicators */
+  .accessibility-focus-visible *:focus {
+    @apply outline-none ring-4 ring-blue-500 ring-offset-2;
+    outline: 3px solid #3b82f6 !important;
+  }
+
+  .accessibility-high-contrast.accessibility-focus-visible *:focus {
+    @apply ring-yellow-400;
+    outline: 3px solid #fbbf24 !important;
+  }
+
+  /* Reduced Motion */
+  .accessibility-reduce-motion * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .accessibility-reduce-motion *,
+  .accessibility-reduce-motion *:before,
+  .accessibility-reduce-motion *:after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0s !important;
+    transition-duration: 0s !important;
+  }
+
+  /* Font Size Classes */
+  .accessibility-font-small {
+    font-size: 0.75rem !important;
+  }
+
+  .accessibility-font-small h1 {
+    @apply text-2xl;
+  }
+
+  .accessibility-font-small h2 {
+    @apply text-xl;
+  }
+
+  .accessibility-font-small h3 {
+    @apply text-lg;
+  }
+
+  .accessibility-font-small h4 {
+    @apply text-base;
+  }
+
+  .accessibility-font-medium {
+    font-size: 0.875rem !important;
+  }
+
+  .accessibility-font-large {
+    font-size: 1.125rem !important;
+  }
+
+  .accessibility-font-large h1 {
+    @apply text-4xl;
+  }
+
+  .accessibility-font-large h2 {
+    @apply text-3xl;
+  }
+
+  .accessibility-font-large h3 {
+    @apply text-2xl;
+  }
+
+  .accessibility-font-large h4 {
+    @apply text-xl;
+  }
+
+  .accessibility-font-extra-large {
+    font-size: 1.5rem !important;
+  }
+
+  .accessibility-font-extra-large h1 {
+    @apply text-6xl;
+  }
+
+  .accessibility-font-extra-large h2 {
+    @apply text-5xl;
+  }
+
+  .accessibility-font-extra-large h3 {
+    @apply text-4xl;
+  }
+
+  .accessibility-font-extra-large h4 {
+    @apply text-3xl;
+  }
+
+  /* Color Blind Support */
+  .accessibility-colorblind-support {
+    filter: var(--accessibility-filter);
+  }
+
+  .accessibility-colorblind-support .text-red-600,
+  .accessibility-colorblind-support .bg-red-100,
+  .accessibility-colorblind-support .bg-red-500,
+  .accessibility-colorblind-support .bg-red-600 {
+    @apply bg-blue-600 text-white;
+  }
+
+  .accessibility-colorblind-support .text-green-600,
+  .accessibility-colorblind-support .bg-green-100,
+  .accessibility-colorblind-support .bg-green-500,
+  .accessibility-colorblind-support .bg-green-600 {
+    @apply bg-emerald-700 text-white;
+  }
+
+  .accessibility-colorblind-support .text-yellow-600,
+  .accessibility-colorblind-support .bg-yellow-100,
+  .accessibility-colorblind-support .bg-yellow-500,
+  .accessibility-colorblind-support .bg-yellow-600 {
+    @apply bg-amber-800 text-white;
+  }
+
+  /* Skip Links */
+  .skip-link {
+    @apply absolute -top-10 left-2 bg-blue-600 text-white px-3 py-2 rounded z-50 transition-all duration-300;
+  }
+
+  .skip-link:focus {
+    @apply top-2;
+  }
+
+  /* Enhanced Button Accessibility */
+  .accessibility-focus-visible button:focus,
+  .accessibility-focus-visible a:focus,
+  .accessibility-focus-visible input:focus,
+  .accessibility-focus-visible select:focus,
+  .accessibility-focus-visible textarea:focus {
+    @apply outline-none ring-4 ring-blue-500 ring-offset-2;
+  }
+
+  /* Improved Click Targets */
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Loading States */
+  .loading::after {
+    content: 'Loading...';
+    @apply absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white bg-opacity-90 px-4 py-2 rounded font-bold;
+  }
+
+  /* Progress Indicators */
+  .progress-bar {
+    @apply bg-gray-200 rounded-lg h-2 overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply bg-blue-500 h-full transition-all duration-300;
+  }
+
+  .accessibility-reduce-motion .progress-fill {
+    @apply transition-none;
+  }
+}
+
+@layer utilities {
+  /* Custom Utilities for Accessibility */
+  .text-accessible {
+    font-size: var(--accessibility-base-font-size);
+  }
+
+  .zoom-accessible {
+    zoom: var(--accessibility-zoom);
+  }
+
+  .filter-accessible {
+    filter: var(--accessibility-filter);
+  }
+
+  /* Focus Ring Utilities */
+  .focus-ring-yellow {
+    @apply focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2;
+  }
+
+  .focus-ring-blue {
+    @apply focus:ring-4 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  /* Accessible Text Contrast */
+  .text-contrast-high {
+    color: contrast(150%);
+  }
+}
+
+/* Media Queries for System Preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  :root {
+    --tw-ring-width: 3px;
+    --tw-ring-offset-width: 3px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  * {
+    @apply bg-white text-black shadow-none;
+  }
+}

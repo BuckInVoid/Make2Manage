@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { GameState, GameSettings, Order, Department, GameEvent, Decision } from '../types'
 import { initializeGameState, SeededRandom, generateRandomRoute } from '../utils/gameInitialization'
+import { generateOptimizedRoute } from '../utils/routeOptimization'
 
 export const useGameSimulation = (initialSettings: GameSettings) => {
   const [gameState, setGameState] = useState<GameState>(() => initializeGameState(initialSettings))
@@ -42,7 +43,17 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
 
     const newOrders: Order[] = []
     if (rng.next() < generationChance) {
-      const route = generateRandomRoute(rng, complexityLevel)
+      // R06: Use advanced routing logic for new orders
+      const route = gameState.session.settings.enableAdvancedRouting !== false 
+        ? generateOptimizedRoute(rng, gameState.departments, {
+            complexityLevel,
+            prioritizeSpeed: rng.next() < 0.3,
+            prioritizeCost: rng.next() < 0.3,
+            prioritizeReliability: rng.next() < 0.3,
+            avoidBottlenecks: rng.next() < 0.4
+          })
+        : generateRandomRoute(rng, complexityLevel)
+      
       const orderId = `ORD-${String(gameState.totalOrdersGenerated + 1).padStart(3, '0')}`
       
       // Select a random customer for this order
@@ -566,6 +577,160 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
     setCurrentDecisionIndex(-1)
   }, [])
 
+  // R06: Route optimization functionality
+  const optimizeOrderRoute = useCallback((orderId: string, newRoute: number[]) => {
+    const previousState = { ...gameState }
+    
+    setGameState(prev => {
+      const pendingIndex = prev.pendingOrders.findIndex(o => o.id === orderId)
+      if (pendingIndex !== -1) {
+        const updatedPendingOrders = [...prev.pendingOrders]
+        updatedPendingOrders[pendingIndex] = {
+          ...updatedPendingOrders[pendingIndex],
+          route: newRoute
+        }
+        return {
+          ...prev,
+          pendingOrders: updatedPendingOrders
+        }
+      }
+      
+      // Check if order is already in processing
+      const updatedDepartments = prev.departments.map(dept => {
+        const queueIndex = dept.queue.findIndex(o => o.id === orderId)
+        if (queueIndex !== -1) {
+          const updatedQueue = [...dept.queue]
+          updatedQueue[queueIndex] = {
+            ...updatedQueue[queueIndex],
+            route: newRoute
+          }
+          return { ...dept, queue: updatedQueue }
+        }
+        
+        if (dept.inProcess?.id === orderId) {
+          return {
+            ...dept,
+            inProcess: {
+              ...dept.inProcess,
+              route: newRoute
+            }
+          }
+        }
+        
+        return dept
+      })
+      
+      return {
+        ...prev,
+        departments: updatedDepartments
+      }
+    })
+
+    // Record the optimization decision
+    recordDecision(
+      'order-release',
+      `Optimized route for order ${orderId}: ${newRoute.join(' → ')}`,
+      orderId,
+      previousState
+    )
+  }, [gameState, recordDecision])
+
+  // R04-R05: Advanced scheduling functionality
+  const scheduleOrder = useCallback((orderId: string, departmentId: number, scheduledTime: Date) => {
+    const previousState = { ...gameState }
+    
+    setGameState(prev => {
+      // Find the order in pending orders
+      const orderIndex = prev.pendingOrders.findIndex(o => o.id === orderId)
+      if (orderIndex === -1) return prev
+      
+      const order = prev.pendingOrders[orderIndex]
+      const updatedOrder = {
+        ...order,
+        currentStepIndex: 0,
+        currentDepartment: departmentId,
+        status: 'queued' as const,
+        // Add scheduling metadata (could be used for future scheduling logic)
+        scheduledStartTime: scheduledTime
+      }
+      
+      // Remove from pending and add to target department
+      const updatedPendingOrders = prev.pendingOrders.filter((_, i) => i !== orderIndex)
+      const updatedDepartments = prev.departments.map(dept => {
+        if (dept.id === departmentId) {
+          return {
+            ...dept,
+            queue: [...dept.queue, updatedOrder]
+          }
+        }
+        return dept
+      })
+      
+      return {
+        ...prev,
+        pendingOrders: updatedPendingOrders,
+        departments: updatedDepartments
+      }
+    })
+
+    recordDecision(
+      'order-release',
+      `Scheduled order ${orderId} to Department ${departmentId} at ${scheduledTime.toLocaleTimeString()}`,
+      orderId,
+      previousState
+    )
+  }, [gameState, recordDecision])
+
+  // R04-R05: Workload rebalancing functionality
+  const rebalanceWorkload = useCallback((sourceIds: number[], targetIds: number[], ordersToMove: string[]) => {
+    const previousState = { ...gameState }
+    
+    setGameState(prev => {
+      const updatedDepartments = prev.departments.map(dept => {
+        // Remove orders from overloaded departments
+        if (sourceIds.includes(dept.id)) {
+          const remainingQueue = dept.queue.filter(order => !ordersToMove.includes(order.id))
+          return { ...dept, queue: remainingQueue }
+        }
+        return dept
+      })
+      
+      // Distribute moved orders to target departments
+      const movedOrders: any[] = []
+      prev.departments.forEach(dept => {
+        if (sourceIds.includes(dept.id)) {
+          const ordersFromThisDept = dept.queue.filter(order => ordersToMove.includes(order.id))
+          movedOrders.push(...ordersFromThisDept)
+        }
+      })
+      
+      // Distribute moved orders evenly across target departments
+      const finalDepartments = updatedDepartments.map(dept => {
+        if (targetIds.includes(dept.id)) {
+          const targetIndex = targetIds.indexOf(dept.id)
+          const ordersForThisDept = movedOrders.filter((_, index) => index % targetIds.length === targetIndex)
+          return {
+            ...dept,
+            queue: [...dept.queue, ...ordersForThisDept]
+          }
+        }
+        return dept
+      })
+      
+      return {
+        ...prev,
+        departments: finalDepartments
+      }
+    })
+
+    recordDecision(
+      'order-release',
+      `Rebalanced workload: moved ${ordersToMove.length} orders from departments [${sourceIds.join(', ')}] to [${targetIds.join(', ')}]`,
+      undefined,
+      previousState
+    )
+  }, [gameState, recordDecision])
+
   return {
     gameState,
     isRunning,
@@ -574,6 +739,9 @@ export const useGameSimulation = (initialSettings: GameSettings) => {
     pauseGame,
     resetGame,
     releaseOrder,
+    optimizeOrderRoute,
+    scheduleOrder,
+    rebalanceWorkload,
     undoLastDecision,
     redoLastDecision,
     clearDecisionHistory

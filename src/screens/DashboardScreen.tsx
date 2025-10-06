@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
+import { AccessibilityControls } from '../components'
 import LandingScreen from './LandingScreen'
 import GameScreen from './GameScreen'
 import AnalyticsScreen from './AnalyticsScreen'
@@ -46,7 +47,10 @@ export default function DashboardScreen() {
   const screenInfo = getScreenInfo()
 
   return (
-    <div className="w-screen h-screen bg-white flex overflow-hidden">
+    <div className="w-screen h-screen bg-white flex overflow-hidden" id="main-content">
+      {/* Accessibility Controls - Available globally */}
+      <AccessibilityControls />
+
       {/* Left Navigation Sidebar - only show when not on landing page */}
       {activeScreen !== 'landing' && (
         <Sidebar 

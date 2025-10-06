@@ -150,6 +150,23 @@ export default function GameSettingsModal({
             <p className="text-xs text-gray-500 ml-7">Equipment failures, delivery delays, rush orders</p>
           </div>
 
+          {/* R06: Enable Advanced Routing */}
+          <div>
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={settings.enableAdvancedRouting}
+                onChange={(e) => setSettings({ ...settings, enableAdvancedRouting: e.target.checked })}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                <Target className="w-4 h-4 inline mr-2" />
+                Enable Advanced Routing (R06)
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 ml-7">Intelligent route optimization, bottleneck avoidance, priority routing</p>
+          </div>
+
           {/* Random Seed */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

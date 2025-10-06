@@ -23,6 +23,7 @@ export interface Order {
   operationProgress?: OperationProgress[] // Track progress through department operations
   specialInstructions?: string // R03: Special handling requirements
   rushOrder?: boolean // R03: Rush order flag
+  scheduledStartTime?: Date // R04-R05: Scheduled start time for capacity planning
 }
 
 export interface OperationProgress {
@@ -93,6 +94,7 @@ export interface GameSettings {
   randomSeed?: string // for reproducible scenarios
   gameSpeed: 1 | 2 | 4 | 8 // Speed multiplier - R05: speed control
   enableEvents: boolean // R07: equipment failure, delivery delays
+  enableAdvancedRouting: boolean // R06: advanced routing logic
 }
 
 export interface GameState {
